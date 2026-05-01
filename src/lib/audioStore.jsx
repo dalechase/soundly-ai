@@ -257,7 +257,7 @@ export function AudioStoreProvider({ children }) {
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'Generation failed');
       if (payload.job?.debug?.murica && typeof window !== 'undefined') {
-        window.console.info('[Soundly] Mureka payload', payload.job.debug.murica);
+        window.console.info('[Sound.ly] Mureka payload', payload.job.debug.murica);
       }
 
       let currentJob = payload.job;

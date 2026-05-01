@@ -1,6 +1,6 @@
-# Soundly
+# Sound.ly
 
-Soundly is an MVP music generation service. Users can create a song, instrumental, or remix from a prompt, preview the finished audio, and revisit every saved creation from the library.
+Sound.ly is an MVP music generation service. Users can create a song, instrumental, or remix from a prompt, preview the finished audio, and revisit every saved creation from the library.
 
 ## Local Commands
 

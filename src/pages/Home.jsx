@@ -45,19 +45,20 @@ export default function Home() {
 
   return (
     <main className="min-h-screen pb-40">
-      <section className="relative overflow-hidden border-b border-blue-200/10">
+      <section className="relative overflow-hidden border-b border-white/10">
         <img className="absolute inset-0 h-full w-full object-cover opacity-30" src="/assets/soundly-hero.png" alt="" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#06101f_0%,rgba(6,16,31,0.92)_44%,rgba(6,16,31,0.62)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,#06101f_0%,rgba(6,16,31,0.9)_38%,rgba(6,16,31,0.58)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.22),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,204,102,0.18),transparent_24%)]" />
         <div className="relative mx-auto max-w-[980px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
           <form onSubmit={submit}>
             <h1 className="mt-5 max-w-3xl font-display text-4xl font-black leading-tight text-white sm:text-6xl">
               Create songs, instrumentals, and remixes from one prompt.
             </h1>
-            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-blue-100/68">
+            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-blue-50/70">
               Start with a plain-language idea, choose the shape of the track, and generate directly into your saved library.
             </p>
 
-            <div className="mt-7 rounded-md border border-blue-200/10 bg-[#071a33]/90 p-4 shadow-[0_24px_100px_rgba(37,99,235,0.22)]">
+            <div className="mt-7 rounded-md border border-white/10 bg-[rgba(9,24,44,0.88)] p-4 shadow-[0_28px_120px_rgba(56,189,248,0.12)]">
               <div className="grid gap-2 sm:grid-cols-3">
                 {generationKinds.map((kind) => (
                   <button
@@ -66,8 +67,8 @@ export default function Home() {
                     onClick={() => chooseKind(kind.id)}
                     className={`rounded-md border p-3 text-left transition ${
                       settings.kind === kind.id
-                        ? 'border-sky bg-blue-500 text-white shadow-glow'
-                        : 'border-blue-200/10 bg-blue-950/45 text-blue-100/65 hover:border-blue-300/30 hover:text-white'
+                        ? 'border-sky/60 bg-[linear-gradient(135deg,#2563eb,#38bdf8)] text-white shadow-[0_0_34px_rgba(56,189,248,0.24)]'
+                        : 'border-white/10 bg-white/5 text-blue-50/70 hover:border-amber/30 hover:text-white'
                     }`}
                   >
                     <span className="block text-sm font-black">{kind.label}</span>
@@ -77,9 +78,9 @@ export default function Home() {
               </div>
 
               <label className="mt-4 block">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-blue-200/45">Prompt</span>
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-amber/80">Prompt</span>
                 <textarea
-                  className="mt-2 min-h-32 w-full resize-none rounded-md border border-blue-200/10 bg-blue-950/55 p-4 text-base font-semibold leading-7 text-white outline-none transition placeholder:text-blue-100/28 focus:border-sky"
+                  className="mt-2 min-h-32 w-full resize-none rounded-md border border-white/10 bg-white/5 p-4 text-base font-semibold leading-7 text-white outline-none transition placeholder:text-blue-50/30 focus:border-sky/55"
                   value={settings.prompt}
                   onChange={(event) => updateSetting('prompt', event.target.value)}
                   placeholder="Describe the track you want to hear"
@@ -88,7 +89,7 @@ export default function Home() {
 
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 <div>
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-200/45">Style</div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-amber/80">Style</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {stylePresets.map((style) => (
                       <button
@@ -97,8 +98,8 @@ export default function Home() {
                         onClick={() => updateSetting('style', style)}
                         className={`rounded-md border px-3 py-2 text-xs font-black transition ${
                           settings.style === style
-                            ? 'border-sky bg-sky text-blue-950'
-                            : 'border-blue-200/10 bg-blue-950/45 text-blue-100/58 hover:text-white'
+                            ? 'border-amber/50 bg-amber text-[#08101b]'
+                            : 'border-white/10 bg-white/5 text-blue-50/65 hover:border-amber/30 hover:text-white'
                         }`}
                       >
                         {style}
@@ -108,7 +109,7 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-200/45">Mood</div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-amber/80">Mood</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {moodPresets.map((mood) => (
                       <button
@@ -117,8 +118,8 @@ export default function Home() {
                         onClick={() => updateSetting('mood', mood)}
                         className={`rounded-md border px-3 py-2 text-xs font-black transition ${
                           settings.mood === mood
-                            ? 'border-sky bg-sky text-blue-950'
-                            : 'border-blue-200/10 bg-blue-950/45 text-blue-100/58 hover:text-white'
+                            ? 'border-amber/50 bg-amber text-[#08101b]'
+                            : 'border-white/10 bg-white/5 text-blue-50/65 hover:border-amber/30 hover:text-white'
                         }`}
                       >
                         {mood}
@@ -131,14 +132,14 @@ export default function Home() {
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-blue-500 px-5 text-sm font-black text-white shadow-glow transition hover:bg-blue-400"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[linear-gradient(135deg,#2563eb,#38bdf8)] px-5 text-sm font-black text-white shadow-[0_0_34px_rgba(56,189,248,0.24)] transition hover:brightness-105"
                 >
                   <Wand2 size={18} />
                   Create
                   <ArrowRight size={17} />
                 </button>
-                <div className="inline-flex items-center gap-2 text-xs font-bold text-blue-100/52">
-                  <span className={`h-2 w-2 rounded-full ${audioStatus?.ready ? 'bg-sky' : 'bg-amber'}`} />
+                <div className="inline-flex items-center gap-2 text-xs font-bold text-blue-50/60">
+                  <span className={`h-2 w-2 rounded-full ${audioStatus?.ready ? 'bg-amber' : 'bg-sky'}`} />
                   {audioStatus?.murekaConfigured ? 'Mureka credentials loaded' : 'Fallback composer ready'}
                 </div>
               </div>

@@ -644,7 +644,7 @@ async function runBuiltInComposer(settings) {
   await new Promise((resolve) => setTimeout(resolve, 700));
   return {
     provider: 'soundly-fallback',
-    model: 'Soundly MVP Composer',
+    model: 'Sound.ly MVP Composer',
     ...synthesizeMusic(settings),
   };
 }
@@ -688,7 +688,7 @@ async function audioStatus() {
     murekaConfigured: muricaConfigured(),
     provider: muricaConfigured() ? 'mureka' : 'soundly-fallback',
     muricaBaseUrl: muricaConfigured() ? muricaBaseUrl() : null,
-    model: muricaConfigured() ? process.env.MURICA_MODEL || process.env.MUREKA_MODEL || 'auto' : 'Soundly MVP Composer',
+    model: muricaConfigured() ? process.env.MURICA_MODEL || process.env.MUREKA_MODEL || 'auto' : 'Sound.ly MVP Composer',
     supportedKinds: ['song', 'instrumental', 'remix'],
   };
 }
@@ -818,5 +818,5 @@ if (isProduction) {
 }
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Soundly server listening on http://localhost:${port}`);
+  console.log(`Sound.ly server listening on http://localhost:${port}`);
 });

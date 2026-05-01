@@ -18,7 +18,7 @@ function PlayerButton({ children, label, disabled, onClick }) {
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-blue-200/10 bg-blue-950/70 text-blue-100 transition hover:border-blue-300/30 hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-35"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-blue-50/80 transition hover:border-amber/30 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
     >
       {children}
     </button>
@@ -50,17 +50,17 @@ export default function BottomPlayer() {
   const progressMax = Math.max(trackLength, currentTime, 1);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-blue-200/10 bg-[#061326]/95 backdrop-blur-xl">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[rgba(7,18,34,0.92)] backdrop-blur-xl">
       <div className="mx-auto grid max-w-[1440px] gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(380px,1.3fr)_minmax(180px,auto)] lg:items-center">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[linear-gradient(135deg,#2563eb,#0891b2)] text-white shadow-glow">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-[linear-gradient(135deg,#2563eb,#38bdf8)] text-white shadow-[0_0_34px_rgba(56,189,248,0.22)]">
             {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </div>
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-white">
               {currentCreation?.title || 'Create a track to start listening'}
             </div>
-            <div className="truncate text-xs font-semibold text-blue-200/55">
+            <div className="truncate text-xs font-semibold text-blue-50/60">
               {currentCreation ? `${currentCreation.style} - ${currentCreation.kind}` : `${creations.length} tracks in library`}
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function BottomPlayer() {
               aria-label={isPlaying ? 'Pause' : 'Play'}
               disabled={disabled}
               onClick={togglePlay}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-blue-950 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-[#08101b] transition hover:bg-amber disabled:cursor-not-allowed disabled:opacity-35"
             >
               {isPlaying ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />}
             </button>
@@ -92,7 +92,7 @@ export default function BottomPlayer() {
           </div>
 
           <div className="grid grid-cols-[42px_minmax(0,1fr)_42px] items-center gap-2">
-            <span className="text-right text-xs font-bold tabular-nums text-blue-100/55">{formatTime(currentTime)}</span>
+            <span className="text-right text-xs font-bold tabular-nums text-blue-50/60">{formatTime(currentTime)}</span>
             <input
               type="range"
               min="0"
@@ -104,14 +104,14 @@ export default function BottomPlayer() {
               className="h-1 w-full accent-sky disabled:opacity-30"
               aria-label="Seek"
             />
-            <span className="text-xs font-bold tabular-nums text-blue-100/55">{formatTime(trackLength)}</span>
+            <span className="text-xs font-bold tabular-nums text-blue-50/60">{formatTime(trackLength)}</span>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-200/10 bg-blue-950/70 text-blue-100 transition hover:border-blue-300/30 hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-35"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/5 text-blue-50/80 transition hover:border-amber/30 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
             disabled={disabled}
             onClick={() => setMuted(!muted)}
             aria-label={muted ? 'Unmute' : 'Mute'}
@@ -130,7 +130,9 @@ export default function BottomPlayer() {
           />
           <a
             className={`inline-flex h-9 items-center justify-center gap-2 rounded-md px-3 text-xs font-black transition ${
-              currentSource ? 'bg-blue-500 text-white hover:bg-blue-400' : 'pointer-events-none bg-blue-900/60 text-blue-100/25'
+              currentSource
+                ? 'bg-[linear-gradient(135deg,#2563eb,#38bdf8)] text-white hover:brightness-105'
+                : 'pointer-events-none bg-white/5 text-blue-50/25'
             }`}
             href={currentSource || undefined}
             download={`soundly-${currentCreation?.kind || 'track'}-${currentCreation?.id || 'track'}.${audioExtensionFor(currentCreation)}`}
