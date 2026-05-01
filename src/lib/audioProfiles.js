@@ -35,7 +35,7 @@ export const styleProfiles = {
     brightness: 0.48,
     bassMovement: 0.7,
   },
-  'Hip Hop (Boom Bap)': {
+  'Boom Bap': {
     tempoRange: [80, 100],
     drums: 'Hard kicks, dusty snares, swing-heavy',
     instruments: 'Samples, vinyl textures, horns, piano loops',
@@ -53,7 +53,7 @@ export const styleProfiles = {
     brightness: 0.42,
     bassMovement: 0.38,
   },
-  'Hip Hop (Trap)': {
+  'Trap': {
     tempoRange: [130, 160],
     drums: '808s, rapid hi-hats, rolls, snappy snares',
     instruments: 'Dark synths, bells, plucks',

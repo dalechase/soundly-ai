@@ -15,7 +15,7 @@ export const generationKinds = [
   {
     id: 'remix',
     label: 'Remix',
-    description: 'A new version with stronger movement and fresh energy.',
+    description: 'A new version with stronger movement and fresh drums.',
   },
 ];
 
@@ -26,9 +26,6 @@ export const defaultSettings = {
   prompt: 'A blue-lit late night pop song with warm synth chords, clean drums, emotional hook, polished radio mix',
   style: 'Pop',
   mood: 'Warm',
-  duration: 20,
-  energy: 6,
-  sourceCreationId: null,
 };
 
 const AudioStoreContext = createContext(null);
@@ -37,7 +34,7 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function formatDuration(value) {
+export function formatTime(value) {
   const seconds = Number(value);
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const minutes = Math.floor(seconds / 60);
@@ -63,15 +60,10 @@ export function audioExtensionFor(item) {
 
 function normalizeSettings(settings = {}) {
   return {
-    ...defaultSettings,
-    ...settings,
     kind: generationKinds.some((kind) => kind.id === settings.kind) ? settings.kind : defaultSettings.kind,
     prompt: String(settings.prompt || defaultSettings.prompt),
     style: styleProfileFor(settings.style || defaultSettings.style).name,
     mood: moodProfileFor(settings.mood || defaultSettings.mood).name,
-    duration: Number(settings.duration || defaultSettings.duration),
-    energy: Number(settings.energy ?? defaultSettings.energy),
-    sourceCreationId: settings.sourceCreationId || null,
   };
 }
 
@@ -83,7 +75,7 @@ export function AudioStoreProvider({ children }) {
   const [currentId, setCurrentId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playerLength, setPlayerLength] = useState(0);
   const [volume, setVolumeState] = useState(0.85);
   const [muted, setMuted] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
@@ -139,7 +131,7 @@ export function AudioStoreProvider({ children }) {
     if (!audio) return;
 
     const syncTime = () => setCurrentTime(audio.currentTime || 0);
-    const syncDuration = () => setPlayerDuration(Number.isFinite(audio.duration) ? audio.duration : currentCreation?.duration || 0);
+    const syncLength = () => setPlayerLength(currentCreation?.lengthSeconds || 0);
     const markPlaying = () => setIsPlaying(true);
     const markPaused = () => setIsPlaying(false);
     const playNext = () => {
@@ -154,21 +146,19 @@ export function AudioStoreProvider({ children }) {
     };
 
     audio.addEventListener('timeupdate', syncTime);
-    audio.addEventListener('loadedmetadata', syncDuration);
-    audio.addEventListener('durationchange', syncDuration);
+    audio.addEventListener('loadedmetadata', syncLength);
     audio.addEventListener('play', markPlaying);
     audio.addEventListener('pause', markPaused);
     audio.addEventListener('ended', playNext);
 
     return () => {
       audio.removeEventListener('timeupdate', syncTime);
-      audio.removeEventListener('loadedmetadata', syncDuration);
-      audio.removeEventListener('durationchange', syncDuration);
+      audio.removeEventListener('loadedmetadata', syncLength);
       audio.removeEventListener('play', markPlaying);
       audio.removeEventListener('pause', markPaused);
       audio.removeEventListener('ended', playNext);
     };
-  }, [creations, currentCreation?.duration]);
+  }, [creations, currentCreation?.lengthSeconds]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -181,7 +171,7 @@ export function AudioStoreProvider({ children }) {
     if (!audio) return;
     audio.load();
     setCurrentTime(0);
-    setPlayerDuration(currentCreation?.duration || 0);
+    setPlayerLength(currentCreation?.lengthSeconds || 0);
     if (!currentSource) {
       setIsPlaying(false);
       return;
@@ -190,13 +180,21 @@ export function AudioStoreProvider({ children }) {
       playAfterSourceChangeRef.current = false;
       audio.play().catch(() => setIsPlaying(false));
     }
-  }, [currentSource, currentCreation?.duration]);
+  }, [currentSource, currentCreation?.lengthSeconds]);
 
   const playCreation = useCallback((id) => {
     if (!id) return;
+    const audio = audioRef.current;
+    if (currentId === id) {
+      if (!audio || !currentSource) return;
+      if (audio.paused) {
+        audio.play().catch(() => setIsPlaying(false));
+      }
+      return;
+    }
     playAfterSourceChangeRef.current = true;
     setCurrentId(id);
-  }, []);
+  }, [currentId, currentSource]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -211,16 +209,18 @@ export function AudioStoreProvider({ children }) {
   const moveBy = useCallback((offset) => {
     const audio = audioRef.current;
     if (!audio || !currentSource) return;
-    audio.currentTime = Math.min(Math.max(0, audio.currentTime + offset), audio.duration || playerDuration || 0);
+    const targetTime = Math.max(0, audio.currentTime + offset);
+    audio.currentTime = playerLength ? Math.min(targetTime, playerLength) : targetTime;
     setCurrentTime(audio.currentTime);
-  }, [currentSource, playerDuration]);
+  }, [currentSource, playerLength]);
 
   const seekTo = useCallback((value) => {
     const audio = audioRef.current;
     if (!audio || !currentSource) return;
-    audio.currentTime = Math.min(Math.max(0, Number(value)), audio.duration || playerDuration || 0);
+    const targetTime = Math.max(0, Number(value));
+    audio.currentTime = playerLength ? Math.min(targetTime, playerLength) : targetTime;
     setCurrentTime(audio.currentTime);
-  }, [currentSource, playerDuration]);
+  }, [currentSource, playerLength]);
 
   const setVolume = useCallback((value) => {
     const nextVolume = Math.min(Math.max(Number(value), 0), 1);
@@ -256,6 +256,9 @@ export function AudioStoreProvider({ children }) {
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'Generation failed');
+      if (payload.job?.debug?.murica && typeof window !== 'undefined') {
+        window.console.info('[Soundly] Mureka payload', payload.job.debug.murica);
+      }
 
       let currentJob = payload.job;
       setActiveJob(currentJob);
@@ -273,7 +276,7 @@ export function AudioStoreProvider({ children }) {
       const updatedCreations = await refreshLibrary();
       const created = currentJob.creation || updatedCreations.find((creation) => creation.id === currentJob.id) || null;
       if (created) {
-        setCurrentId(created.id);
+        playCreation(created.id);
       }
       return currentJob;
     } catch (error) {
@@ -282,7 +285,7 @@ export function AudioStoreProvider({ children }) {
     } finally {
       setActiveJob((job) => (job?.status === 'completed' ? job : null));
     }
-  }, [refreshLibrary]);
+  }, [playCreation, refreshLibrary]);
 
   const deleteCreation = useCallback(async (id) => {
     const response = await fetch(`/api/creations/${id}`, { method: 'DELETE' });
@@ -299,7 +302,7 @@ export function AudioStoreProvider({ children }) {
     currentCreation,
     currentSource,
     currentTime,
-    playerDuration,
+    playerLength,
     volume,
     muted,
     isPlaying,
@@ -333,7 +336,7 @@ export function AudioStoreProvider({ children }) {
     moveBy,
     muted,
     playCreation,
-    playerDuration,
+    playerLength,
     refreshLibrary,
     refreshStatus,
     seekTo,

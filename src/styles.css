@@ -32,4 +32,21 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .animate-wave {
+    animation: soundly-wave 1.05s ease-in-out infinite;
+  }
+}
+
+@keyframes soundly-wave {
+  0%,
+  100% {
+    transform: scaleY(0.48);
+    opacity: 0.48;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }

@@ -14,7 +14,6 @@ import {
   audioExtensionFor,
   audioSourceFor,
   defaultSettings,
-  formatDuration,
   generationKinds,
   moodPresets,
   stylePresets,
@@ -25,15 +24,10 @@ const launchedRequests = new Set();
 
 function cleanSettings(settings = {}) {
   return {
-    ...defaultSettings,
-    ...settings,
     kind: generationKinds.some((kind) => kind.id === settings.kind) ? settings.kind : defaultSettings.kind,
     prompt: String(settings.prompt || defaultSettings.prompt),
     style: String(settings.style || defaultSettings.style),
     mood: String(settings.mood || defaultSettings.mood),
-    duration: Number(settings.duration || defaultSettings.duration),
-    energy: Number(settings.energy ?? defaultSettings.energy),
-    sourceCreationId: settings.sourceCreationId || null,
   };
 }
 
@@ -143,7 +137,6 @@ function RecentGenerationItem({
           <span className="rounded-md bg-blue-500 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white">
             {creation.kind}
           </span>
-          <span className="text-xs font-normal text-blue-100/42">{formatDuration(creation.duration)}</span>
         </div>
       </div>
     </article>
@@ -171,7 +164,6 @@ export default function Create() {
   const autoLaunchedRef = useRef(false);
 
   const isWaiting = isGenerating || ['queued', 'running'].includes(activeJob?.status);
-  const sourceCreation = settings.sourceCreationId ? creations.find((creation) => creation.id === settings.sourceCreationId) : null;
   const error = localError || generationError;
 
   function updateSetting(key, value) {
@@ -183,14 +175,13 @@ export default function Create() {
     setIsGenerating(true);
     setLocalError('');
     try {
-      const job = await generate(settings);
-      if (job.creation) playCreation(job.creation.id);
+      await generate(settings);
     } catch (caughtError) {
       setLocalError(caughtError.message);
     } finally {
       setIsGenerating(false);
     }
-  }, [generate, playCreation, settings]);
+  }, [generate, settings]);
 
   function remixFromCreation(creation) {
     setSettings({
@@ -198,10 +189,7 @@ export default function Create() {
       kind: 'remix',
       style: creation.style,
       mood: creation.mood || 'Focused',
-      duration: Math.min(Math.max(Number(creation.duration || 24), 16), 45),
-      energy: Math.min(Number(creation.energy || 6) + 2, 10),
-      sourceCreationId: creation.id,
-      prompt: `Remix "${creation.title}" with ${creation.style} energy. Keep the core mood, add stronger drums, brighter movement, and a polished modern mix.`,
+      prompt: `Remix "${creation.title}" with a stronger ${creation.style} pulse. Keep the core mood, add stronger drums, brighter movement, and a polished modern mix.`,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -253,22 +241,6 @@ export default function Create() {
               </button>
             ))}
           </div>
-
-          {sourceCreation && (
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-sky/25 bg-sky/10 p-3">
-              <div className="min-w-0">
-                <div className="text-xs font-black uppercase tracking-[0.16em] text-sky">Remix Source</div>
-                <div className="mt-1 truncate text-sm font-bold text-white">{sourceCreation.title}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => updateSetting('sourceCreationId', null)}
-                className="h-9 rounded-md border border-blue-200/10 px-3 text-xs font-black text-blue-100 hover:bg-blue-900"
-              >
-                Clear
-              </button>
-            </div>
-          )}
 
           <label className="mt-4 block">
             <span className="text-xs font-black uppercase tracking-[0.18em] text-blue-200/45">Prompt</span>

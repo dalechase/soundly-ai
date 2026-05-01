@@ -68,9 +68,7 @@ function saveCreation(job) {
     prompt: job.settings.prompt,
     style: job.settings.style,
     mood: job.settings.mood,
-    duration: job.result?.duration || job.settings.duration,
-    energy: job.settings.energy,
-    sourceCreationId: job.settings.sourceCreationId || null,
+    lengthSeconds: job.result?.lengthSeconds || null,
     settings: job.settings,
     result: job.result,
     provider: job.result?.provider || job.provider,
@@ -123,11 +121,12 @@ function normalizeAudioSettings(body = {}) {
     prompt,
     style,
     mood,
-    duration: clampNumber(body.duration, 8, 45, kind === 'remix' ? 24 : 20),
-    energy: clampNumber(body.energy ?? body.intensity, 1, 10, 6),
-    sourceCreationId: String(body.sourceCreationId || '').trim() || null,
     seed: String(body.seed || randomUUID()),
   };
+}
+
+function clipLengthSeconds(settings) {
+  return settings.kind === 'remix' ? 24 : 20;
 }
 
 function pruneAudioJobs() {
@@ -316,14 +315,14 @@ function softClip(value) {
 
 function synthesizeMusic(settings) {
   const sampleRate = 32000;
-  const length = Math.floor(settings.duration * sampleRate);
+  const clipLength = clipLengthSeconds(settings);
+  const length = Math.floor(clipLength * sampleRate);
   const left = new Float32Array(length);
   const right = new Float32Array(length);
   const profile = compositionProfile(settings);
   const beatDuration = 60 / profile.tempo;
   const barDuration = beatDuration * 4;
   const stepDuration = beatDuration / 2;
-  const energy = settings.energy / 10;
   let noiseState = hashString(`${settings.seed}-noise`) || 1;
   const delaySamples = Math.max(1, Math.floor(sampleRate * (0.08 + profile.spaceAmount * 0.18)));
   const delayLeft = new Float32Array(delaySamples);
@@ -338,7 +337,7 @@ function synthesizeMusic(settings) {
   for (let index = 0; index < length; index += 1) {
     const time = index / sampleRate;
     const fadeIn = Math.min(1, time / 0.2);
-    const fadeOut = Math.min(1, (settings.duration - time) / 0.5);
+    const fadeOut = Math.min(1, (clipLength - time) / 0.5);
     const masterEnv = Math.max(0, Math.min(fadeIn, fadeOut));
     const beat = time / beatDuration;
     const beatPhase = beat - Math.floor(beat);
@@ -364,7 +363,7 @@ function synthesizeMusic(settings) {
     const bassStep = Math.floor(beat * (profile.bassMovement > 0.62 ? 2 : 1));
     const bassNote = chordRoot - 12 + bassOffsets[bassStep % bassOffsets.length];
     const bassPhase = midiToHz(bassNote) * time + Math.sin(time * Math.PI * 2 * 2.2) * profile.bassMovement * 0.004;
-    sample += oscillator('sine', bassPhase) * 0.28 * (0.58 + energy * 0.42) * (0.8 + profile.bassMovement * 0.32);
+    sample += oscillator('sine', bassPhase) * 0.28 * 0.832 * (0.8 + profile.bassMovement * 0.32);
 
     const step = Math.floor(time / stepDuration);
     const stepTime = (time % stepDuration) / stepDuration;
@@ -372,13 +371,13 @@ function synthesizeMusic(settings) {
     if (melodyNote) {
       const melodyEnv = Math.sin(Math.PI * Math.min(1, stepTime)) * Math.exp(-stepTime * 1.9);
       const melodyWave = profile.brightness > 0.72 ? 'square' : 'triangle';
-      sample += oscillator(melodyWave, midiToHz(melodyNote) * time) * melodyEnv * (0.11 + profile.brightness * 0.08 + energy * 0.08);
+      sample += oscillator(melodyWave, midiToHz(melodyNote) * time) * melodyEnv * (0.158 + profile.brightness * 0.08);
     }
 
     if (profile.vocalHint) {
       const phrasePhase = (time % (barDuration * 2)) / (barDuration * 2);
       const vowel = Math.sin(Math.PI * 2 * midiToHz(chordRoot + 24) * time) * Math.sin(Math.PI * phrasePhase);
-      sample += vowel * profile.vocalHint * (0.7 + energy * 0.3);
+      sample += vowel * profile.vocalHint * 0.88;
     }
 
     const accents = drumAccents(profile.style.drumFeel, beat, profile.swing);
@@ -457,7 +456,7 @@ function encodeWavStereo(left, right, sampleRate) {
     audioBase64: buffer.toString('base64'),
     mimeType: 'audio/wav',
     sampleRate,
-    duration: Number((frameCount / sampleRate).toFixed(2)),
+    lengthSeconds: Number((frameCount / sampleRate).toFixed(2)),
     previewPeaks: previewPeaksFromStereo(left, right),
   };
 }
@@ -487,11 +486,30 @@ function muricaPrompt(settings) {
     settings.prompt,
     `${style.name} style: ${style.drums}; ${style.instruments}; ${style.chords}; ${style.bass}; ${style.mix}`,
     `${mood.name} mood: ${mood.harmony}; ${mood.space}; ${mood.drums}`,
-    `${settings.duration} second target`,
-    `${settings.energy}/10 energy`,
     settings.kind === 'instrumental' ? 'instrumental, no lead vocal' : '',
     settings.kind === 'remix' ? 'remix version, fresh arrangement, club-ready clarity' : '',
   ].filter(Boolean).join(', ');
+}
+
+function muricaRequestConfig(settings) {
+  const model = muricaModel(settings);
+  const pathname = settings.kind === 'instrumental'
+    ? '/v1/instrumental/generate'
+    : settings.kind === 'remix' && process.env.MURICA_REAL_REMIX === 'true'
+      ? '/v1/song/remix'
+      : '/v1/song/generate';
+
+  return {
+    url: `${muricaBaseUrl()}${pathname}`,
+    pathname,
+    body: {
+      model,
+      n: 1,
+      prompt: muricaPrompt(settings),
+      stream: false,
+      ...(settings.kind !== 'instrumental' ? { lyrics: muricaLyrics(settings) } : {}),
+    },
+  };
 }
 
 function muricaLyrics(settings) {
@@ -534,12 +552,6 @@ function muricaAudioChoice(task) {
   return { choice, audioUrl, mimeType: muricaMimeType(audioUrl) };
 }
 
-function muricaDurationSeconds(choice, fallback) {
-  const duration = Number(choice?.duration);
-  if (!Number.isFinite(duration) || duration <= 0) return fallback;
-  return duration > 1000 ? Number((duration / 1000).toFixed(2)) : Number(duration.toFixed(2));
-}
-
 async function muricaRequest(pathname, body) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Number(process.env.MURICA_HTTP_TIMEOUT_MS || process.env.MUREKA_HTTP_TIMEOUT_MS || 45000));
@@ -578,22 +590,10 @@ async function muricaRequest(pathname, body) {
 async function runMurica(settings, onProgress = () => {}) {
   const model = muricaModel(settings);
   const generationKind = settings.kind === 'instrumental' ? 'instrumental' : 'song';
-  const createPath = settings.kind === 'instrumental'
-    ? '/v1/instrumental/generate'
-    : settings.kind === 'remix' && process.env.MURICA_REAL_REMIX === 'true'
-      ? '/v1/song/remix'
-      : '/v1/song/generate';
+  const requestConfig = muricaRequestConfig(settings);
+  const createPath = requestConfig.pathname;
   const queryPath = generationKind === 'instrumental' ? '/v1/instrumental/query' : '/v1/song/query';
-  const body = {
-    model,
-    n: 1,
-    prompt: muricaPrompt(settings),
-    stream: false,
-    ...(settings.kind !== 'instrumental' ? { lyrics: muricaLyrics(settings) } : {}),
-    ...(settings.kind === 'remix' && settings.sourceCreationId ? { source_creation_id: settings.sourceCreationId } : {}),
-  };
-
-  const created = await muricaRequest(createPath, body);
+  const created = await muricaRequest(createPath, requestConfig.body);
   const taskId = created.id || created.task_id || created.data?.id || created.data?.task_id;
   if (!taskId) throw new Error('Mureka did not return a task id.');
 
@@ -623,7 +623,6 @@ async function runMurica(settings, onProgress = () => {}) {
         model: task.model || task.data?.model || model,
         audioUrl: audioChoice.audioUrl,
         mimeType: audioChoice.mimeType,
-        duration: muricaDurationSeconds(audioChoice.choice, settings.duration),
         previewPeaks: [],
         externalTaskId: String(taskId),
         route: settings.kind,
@@ -674,6 +673,7 @@ function publicAudioJob(job) {
     route: job.route,
     result: job.result,
     creation: job.creation,
+    debug: job.debug,
     error: job.error,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
@@ -708,10 +708,10 @@ async function processAudioJob(job) {
     job.providerStatus = 'completed';
     job.externalTaskId = job.result.externalTaskId || job.externalTaskId;
     job.route = job.result.route || job.route;
-    job.status = 'completed';
     job.completedAt = new Date().toISOString();
     job.updatedAt = job.completedAt;
     job.creation = saveCreation(job);
+    job.status = 'completed';
   } catch (error) {
     job.status = 'failed';
     job.providerStatus = 'failed';
@@ -735,17 +735,21 @@ app.get('/api/audio/status', async (_req, res) => {
 
 app.post('/api/audio/generate', async (req, res) => {
   try {
+    const settings = normalizeAudioSettings(req.body);
     const id = randomUUID();
     const job = {
       id,
       status: 'queued',
-      settings: normalizeAudioSettings(req.body),
+      settings,
       provider: null,
       providerStatus: null,
       externalTaskId: null,
       route: null,
       result: null,
       creation: null,
+      debug: {
+        murica: muricaRequestConfig(settings),
+      },
       error: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
